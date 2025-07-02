@@ -27,6 +27,9 @@ export const dbService = {
   async getEncryptedData(id) {
     return (await dbPromise).get(DATA_STORE, id);
   },
+  async getAllData() {
+    return (await dbPromise).getAll(DATA_STORE);
+  },
   async saveEncryptedData(data) {
     return (await dbPromise).put(DATA_STORE, data);
   },

@@ -19,7 +19,8 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
       h2,
-      h3 {
+      h3,
+      h4 {
         color: #333;
       }
       .section {
@@ -42,6 +43,7 @@
         color: white;
         border-radius: 4px;
         cursor: pointer;
+        margin: 2px;
       }
       button:hover {
         background-color: #0056b3;
@@ -50,9 +52,8 @@
         background-color: #ccc;
         cursor: not-allowed;
       }
-      #logs,
-      pre {
-        margin-top: 10px;
+      #logs {
+        margin-top: 20px;
         background-color: #282c34;
         color: #abb2bf;
         padding: 15px;
@@ -60,9 +61,33 @@
         white-space: pre-wrap;
         word-wrap: break-word;
         font-family: monospace;
+        max-height: 200px;
+        overflow-y: auto;
       }
       .hidden {
         display: none;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      td:first-child {
+        font-family: monospace;
+        font-size: 0.9em;
+        word-break: break-all;
+      }
+      .content-cell input {
+        width: 95%;
       }
     </style>
   </head>
@@ -90,24 +115,28 @@
 
       <div id="dataSection" class="section hidden">
         <h3>3. Data Operations (Session Unlocked)</h3>
-        <div>
-          <input type="text" id="dataId" placeholder="Item ID (e.g., 'doc1')" />
+        <div id="newItemSection">
+          <h4>Add New Item</h4>
           <input
             type="text"
-            id="dataContent"
-            placeholder="Item Content (e.g., 'My secret note')"
+            id="newItemContent"
+            placeholder="Enter new secret content"
           />
-          <button id="saveButton">Save Data</button>
-          <button id="loadButton">Load Data</button>
+          <button id="addButton">Add Item</button>
         </div>
-      </div>
-
-      <div id="inspectionSection" class="section hidden">
-        <h3>4. Data Inspection</h3>
-        <p>Raw ciphertext from IndexedDB (Base64):</p>
-        <pre id="encryptedDataView"></pre>
-        <p>Decrypted content:</p>
-        <pre id="decryptedDataView"></pre>
+        <div id="itemsListSection" style="margin-top: 20px">
+          <h4>Stored Items</h4>
+          <table id="itemsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Content</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
 
       <h3>Logs</h3>

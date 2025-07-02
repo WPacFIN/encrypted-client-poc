@@ -12,78 +12,149 @@ const provisionPinInput = document.getElementById("provisionPin");
 const unlockPinInput = document.getElementById("unlockPin");
 const setupButton = document.getElementById("setupButton");
 const unlockButton = document.getElementById("unlockButton");
-const saveButton = document.getElementById("saveButton");
-const loadButton = document.getElementById("loadButton");
-const dataIdInput = document.getElementById("dataId");
-const dataContentInput = document.getElementById("dataContent");
+const newItemContentInput = document.getElementById("newItemContent");
+const addButton = document.getElementById("addButton");
+const itemsTableBody = document.querySelector("#itemsTable tbody");
 const logs = document.getElementById("logs");
 
 // --- Utility Functions ---
 function log(message) {
   console.log(message);
-  logs.textContent =
-    `${new Date().toLocaleTimeString()}: ${message}\n` + logs.textContent;
+  logs.innerHTML =
+    `${new Date().toLocaleTimeString()}: ${message}\n` + logs.innerHTML;
 }
 
 function disableButtons(disabled) {
-  setupButton.disabled = disabled;
-  unlockButton.disabled = disabled;
-  saveButton.disabled = disabled;
-  loadButton.disabled = disabled;
+  const buttons = document.querySelectorAll("button");
+  buttons.forEach((button) => (button.disabled = disabled));
 }
 
 // --- Main Application Logic ---
 
-async function setupOfflineAccess() {
-  disableButtons(true);
-  const pin = provisionPinInput.value;
-  if (!pin || pin.length < 6) {
-    log("ERROR: PIN must be at least 6 digits.");
-    disableButtons(false);
+async function renderItemsTable() {
+  log("Refreshing items table...");
+  itemsTableBody.innerHTML = ""; // Clear existing table
+  const allItems = await dbService.getAllData();
+
+  if (allItems.length === 0) {
+    log("No items found in the database.");
     return;
   }
 
+  allItems.forEach((item) => {
+    const row = document.createElement("tr");
+    row.dataset.id = item.id;
+    row.innerHTML = `
+            <td>${item.id}</td>
+            <td class="content-cell"><span>[Encrypted]</span></td>
+            <td class="action-cell"><button class="unlock-btn">Unlock</button></td>
+        `;
+    itemsTableBody.appendChild(row);
+  });
+  log(`Rendered ${allItems.length} items.`);
+}
+
+async function handleTableAction(event) {
+  const target = event.target;
+  if (!target.matches("button")) return;
+
+  const row = target.closest("tr");
+  const id = row.dataset.id;
+  const contentCell = row.querySelector(".content-cell");
+  const actionCell = row.querySelector(".action-cell");
+
+  disableButtons(true);
+
   try {
+    if (target.classList.contains("unlock-btn")) {
+      log(`Unlocking item ${id}...`);
+      const decryptedItem = await sessionManager.getDecryptedItem(id);
+      contentCell.innerHTML = `<input type="text" value="${decryptedItem.content}">`;
+      actionCell.innerHTML = `
+                <button class="update-btn">Update</button>
+                <button class="lock-btn">Lock</button>
+            `;
+      log(`Item ${id} unlocked.`);
+    } else if (target.classList.contains("update-btn")) {
+      log(`Updating item ${id}...`);
+      const newContent = contentCell.querySelector("input").value;
+      await sessionManager.saveItem({ id, content: newContent });
+      contentCell.innerHTML = `<span>[Encrypted]</span>`;
+      actionCell.innerHTML = `<button class="unlock-btn">Unlock</button>`;
+      log(`Item ${id} updated and locked.`);
+    } else if (target.classList.contains("lock-btn")) {
+      log(`Locking item ${id}...`);
+      contentCell.innerHTML = `<span>[Encrypted]</span>`;
+      actionCell.innerHTML = `<button class="unlock-btn">Unlock</button>`;
+      log(`Item ${id} locked.`);
+    }
+  } catch (error) {
+    log(`❌ Action failed for item ${id}: ${error.message}`);
+    console.error(error);
+  } finally {
+    disableButtons(false);
+  }
+}
+
+async function addNewItem() {
+  disableButtons(true);
+  try {
+    const content = newItemContentInput.value;
+    if (!content) {
+      log("ERROR: Please provide content for the new item.");
+      return;
+    }
+
+    const newItem = {
+      id: crypto.randomUUID(),
+      content: content,
+    };
+
+    log(`Adding new item with ID: ${newItem.id}...`);
+    await sessionManager.saveItem(newItem);
+    log(`✅ Successfully saved new item.`);
+    newItemContentInput.value = ""; // Clear input
+    await renderItemsTable(); // Refresh table
+  } catch (error) {
+    log(`❌ Failed to save new item: ${error.message}`);
+    console.error(error);
+  } finally {
+    disableButtons(false);
+  }
+}
+
+async function setupOfflineAccess() {
+  disableButtons(true);
+  try {
+    const pin = provisionPinInput.value;
+    if (!pin || pin.length < 6) {
+      log("ERROR: PIN must be at least 6 digits.");
+      return;
+    }
+
     log("1. Starting provisioning process...");
-
-    // Step 1: Generate a salt on the client
-    log("2. Generating a new salt...");
     const salt = cryptoService.generateSalt();
-
-    // Step 2: Call mock server to get a new DEK and its expiry
-    log("3. Requesting new DEK from mock server...");
+    log("2. Generating salt...");
     const { dek: rawDekBuffer, expiryTimestamp } =
       await provisionOfflineAccess();
-
-    // Step 3: Import the raw DEK into a CryptoKey object. This is required
-    // before it can be wrapped.
-    log("3.5. Importing raw DEK into a CryptoKey...");
+    log("3. Requesting new DEK from mock server...");
     const dekAsCryptoKey = await window.crypto.subtle.importKey(
       "raw",
       rawDekBuffer,
       { name: "AES-GCM" },
-      true, // Key must be extractable to be wrapped
+      true,
       ["encrypt", "decrypt"]
     );
-
-    // Step 4: Derive Master Key from PIN and salt
-    log("4. Deriving Master Key from PIN (this might take a moment)...");
+    log("3.5. Importing raw DEK into a CryptoKey...");
     const masterKey = await cryptoService.deriveMasterKey(pin, salt);
-    log("   Master Key derived.");
-
-    // Step 5: Wrap (encrypt) the DEK with the Master Key
-    log("5. Wrapping the DEK with the Master Key...");
+    log("4. Deriving Master Key from PIN (this might take a moment)...");
     const wrappedDek = await cryptoService.wrapDek(masterKey, dekAsCryptoKey);
-    log("   DEK has been wrapped.");
-
-    // Step 6: Store metadata in IndexedDB and "cookie"
-    log("6. Storing salt and expiry in IndexedDB...");
+    log("5. Wrapping the DEK with the Master Key...");
     await dbService.setMetadata("userSalt", salt);
     await dbService.setMetadata("expiryTimestamp", expiryTimestamp);
-
-    log("7. Sending wrapped DEK to mock server to set as cookie...");
+    log("6. Storing salt and expiry in IndexedDB...");
     setWrappedDekCookie(wrappedDek);
-
+    log("7. Sending wrapped DEK to mock server to set as cookie...");
     log("✅ Provisioning complete! Device is ready for offline use.");
     provisioningSection.classList.add("hidden");
     sessionSection.classList.remove("hidden");
@@ -97,68 +168,27 @@ async function setupOfflineAccess() {
 
 async function unlockSession() {
   disableButtons(true);
-  const pin = unlockPinInput.value;
-  if (!pin) {
-    log("ERROR: Please enter your PIN.");
-    disableButtons(false);
-    return;
-  }
-
-  log("Attempting to unlock session with PIN...");
-  const success = await sessionManager.unlockSession(pin);
-
-  if (success) {
-    log("✅ Session unlocked successfully!");
-    sessionSection.classList.add("hidden");
-    dataSection.classList.remove("hidden");
-  } else {
-    log("❌ Invalid PIN. Failed to unlock session.");
-  }
-  disableButtons(false);
-}
-
-async function saveData() {
-  disableButtons(true);
-  const id = dataIdInput.value;
-  const content = dataContentInput.value;
-
-  if (!id || !content) {
-    log("ERROR: Please provide both an ID and content to save.");
-    disableButtons(false);
-    return;
-  }
-
   try {
-    log(`Saving item with ID: ${id}...`);
-    await sessionManager.saveItem({ id, content });
-    log(`✅ Successfully saved item "${id}".`);
-  } catch (error) {
-    log(`❌ Failed to save data: ${error.message}`);
-  } finally {
-    disableButtons(false);
-  }
-}
+    const pin = unlockPinInput.value;
+    if (!pin) {
+      log("ERROR: Please enter your PIN.");
+      return;
+    }
 
-async function loadData() {
-  disableButtons(true);
-  const id = dataIdInput.value;
-  if (!id) {
-    log("ERROR: Please provide an ID to load.");
-    disableButtons(false);
-    return;
-  }
+    log("Attempting to unlock session with PIN...");
+    const success = await sessionManager.unlockSession(pin);
 
-  try {
-    log(`Loading item with ID: ${id}...`);
-    const item = await sessionManager.getDecryptedItem(id);
-    if (item) {
-      log(`✅ Loaded data for ID "${id}": ${JSON.stringify(item)}`);
-      dataContentInput.value = item.content;
+    if (success) {
+      log("✅ Session unlocked successfully!");
+      sessionSection.classList.add("hidden");
+      dataSection.classList.remove("hidden");
+      await renderItemsTable();
     } else {
-      log(`⚠️ No data found for ID "${id}".`);
+      log("❌ Invalid PIN. Failed to unlock session.");
     }
   } catch (error) {
-    log(`❌ Failed to load data: ${error.message}`);
+    log(`❌ Unlock process failed: ${error.message}`);
+    console.error(error);
   } finally {
     disableButtons(false);
   }
@@ -168,17 +198,16 @@ async function loadData() {
 async function initialize() {
   log("Client initialized. Checking for existing provisioning...");
 
-  // Register the service worker
   if ("serviceWorker" in navigator) {
     try {
-      await navigator.serviceWorker.register("/service-worker.js");
-      log("Service Worker registered successfully.");
+      await navigator.serviceWorker.register("./service-worker.js");
+      await navigator.serviceWorker.ready;
+      log("Service Worker registered and active.");
     } catch (error) {
       log(`Service Worker registration failed: ${error}`);
     }
   }
 
-  // Check if the device is already provisioned
   const salt = await dbService.getMetadata("userSalt");
   if (salt) {
     log("Device appears to be provisioned. Hiding setup section.");
@@ -191,8 +220,8 @@ async function initialize() {
   // Add event listeners
   setupButton.addEventListener("click", setupOfflineAccess);
   unlockButton.addEventListener("click", unlockSession);
-  saveButton.addEventListener("click", saveData);
-  loadButton.addEventListener("click", loadData);
+  addButton.addEventListener("click", addNewItem);
+  itemsTableBody.addEventListener("click", handleTableAction);
 }
 
 initialize();
