@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offline Encryption PWA Demo</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 2em;
+        background-color: #f4f4f9;
+      }
+      .container {
+        max-width: 800px;
+        margin: auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      h2,
+      h3 {
+        color: #333;
+      }
+      .section {
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+        margin-top: 15px;
+      }
+      input[type="text"],
+      input[type="password"] {
+        width: 200px;
+        padding: 8px;
+        margin-right: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      button {
+        padding: 8px 15px;
+        border: none;
+        background-color: #007bff;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+      #logs,
+      pre {
+        margin-top: 10px;
+        background-color: #282c34;
+        color: #abb2bf;
+        padding: 15px;
+        border-radius: 4px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: monospace;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Offline Encryption PWA Demo</h2>
+
+      <div id="provisioningSection" class="section">
+        <h3>1. Provisioning (First Time Setup)</h3>
+        <p>Enter a PIN to set up this device for secure offline access.</p>
+        <input
+          type="password"
+          id="provisionPin"
+          placeholder="Enter 6-digit PIN"
+        />
+        <button id="setupButton">Setup Offline Access</button>
+      </div>
+
+      <div id="sessionSection" class="section hidden">
+        <h3>2. Unlock Session</h3>
+        <p>Enter your PIN to unlock the local database.</p>
+        <input type="password" id="unlockPin" placeholder="Enter your PIN" />
+        <button id="unlockButton">Unlock Session</button>
+      </div>
+
+      <div id="dataSection" class="section hidden">
+        <h3>3. Data Operations (Session Unlocked)</h3>
+        <div>
+          <input type="text" id="dataId" placeholder="Item ID (e.g., 'doc1')" />
+          <input
+            type="text"
+            id="dataContent"
+            placeholder="Item Content (e.g., 'My secret note')"
+          />
+          <button id="saveButton">Save Data</button>
+          <button id="loadButton">Load Data</button>
+        </div>
+      </div>
+
+      <div id="inspectionSection" class="section hidden">
+        <h3>4. Data Inspection</h3>
+        <p>Raw ciphertext from IndexedDB (Base64):</p>
+        <pre id="encryptedDataView"></pre>
+        <p>Decrypted content:</p>
+        <pre id="decryptedDataView"></pre>
+      </div>
+
+      <h3>Logs</h3>
+      <div id="logs"></div>
+    </div>
+
+    <script type="module" src="client.js"></script>
+  </body>
+</html>
