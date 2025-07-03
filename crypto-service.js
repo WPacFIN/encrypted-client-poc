@@ -55,6 +55,7 @@ export const cryptoService = {
    */
   async wrapDek(masterKey, dek) {
     const iv = window.crypto.getRandomValues(new Uint8Array(IV_LENGTH_BYTES));
+    // wrapKey in AES-GCM uses an IV, which must be stored alongside the key.
     const wrappedDek = await window.crypto.subtle.wrapKey(
       "raw", // Format of the key to wrap
       dek,

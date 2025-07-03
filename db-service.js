@@ -1,5 +1,5 @@
 // db-service.js
-import { openDB } from "https://unpkg.com/idb?module";
+import { openDB } from "idb";
 
 const DB_NAME = "secure-offline-pwa-db";
 const DB_VERSION = 1;

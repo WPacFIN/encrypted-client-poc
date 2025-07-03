@@ -6,6 +6,14 @@ import { getWrappedDekFromCookie } from "./service-worker-client.js";
 class SessionManager {
   #dek = null; // Private field to hold the in-memory DEK
 
+  isLocked() {
+    return this.#dek === null;
+  }
+
+  lockSession() {
+    this.#dek = null;
+  }
+
   async unlockSession(pin) {
     try {
       const salt = await dbService.getMetadata("userSalt");
@@ -42,13 +50,13 @@ class SessionManager {
       return true;
     } catch (error) {
       console.error("Failed to unlock session:", error);
-      this.#dek = null;
+      this.lockSession(); // Ensure session is locked on failure
       return false;
     }
   }
 
   async getDecryptedItem(id) {
-    if (!this.#dek) throw new Error("Session is locked.");
+    if (this.isLocked()) throw new Error("Session is locked.");
     const encryptedRecord = await dbService.getEncryptedData(id);
     if (!encryptedRecord) return null;
     const plaintext = await cryptoService.decryptData(
@@ -59,7 +67,7 @@ class SessionManager {
   }
 
   async saveItem(item) {
-    if (!this.#dek) throw new Error("Session is locked.");
+    if (this.isLocked()) throw new Error("Session is locked.");
     const plaintext = JSON.stringify(item);
     const encryptedData = await cryptoService.encryptData(this.#dek, plaintext);
     await dbService.saveEncryptedData({ id: item.id, data: encryptedData });
