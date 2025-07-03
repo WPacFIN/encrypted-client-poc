@@ -1,4 +1,5 @@
 // client.js
+
 import { cryptoService } from "./crypto-service.js";
 import { dbService } from "./db-service.js";
 import { sessionManager } from "./session-manager.js";
@@ -12,6 +13,7 @@ const provisionPinInput = document.getElementById("provisionPin");
 const unlockPinInput = document.getElementById("unlockPin");
 const setupButton = document.getElementById("setupButton");
 const unlockButton = document.getElementById("unlockButton");
+const lockButton = document.getElementById("lockButton");
 const newItemContentInput = document.getElementById("newItemContent");
 const addButton = document.getElementById("addButton");
 const itemsTableBody = document.querySelector("#itemsTable tbody");
@@ -58,6 +60,11 @@ async function handleTableAction(event) {
   const target = event.target;
   if (!target.matches("button")) return;
 
+  if (sessionManager.isLocked()) {
+    log("❌ Action failed: Session is locked.");
+    return;
+  }
+
   const row = target.closest("tr");
   const id = row.dataset.id;
   const contentCell = row.querySelector(".content-cell");
@@ -97,6 +104,10 @@ async function handleTableAction(event) {
 }
 
 async function addNewItem() {
+  if (sessionManager.isLocked()) {
+    log("❌ Action failed: Session is locked.");
+    return;
+  }
   disableButtons(true);
   try {
     const content = newItemContentInput.value;
@@ -194,6 +205,15 @@ async function unlockSession() {
   }
 }
 
+function lockSession() {
+  log("Locking session...");
+  sessionManager.lockSession();
+  unlockPinInput.value = ""; // Clear PIN input
+  dataSection.classList.add("hidden");
+  sessionSection.classList.remove("hidden");
+  log("Session is now locked. Please enter PIN to unlock.");
+}
+
 // --- Initialization ---
 async function initialize() {
   log("Client initialized. Checking for existing provisioning...");
@@ -220,6 +240,7 @@ async function initialize() {
   // Add event listeners
   setupButton.addEventListener("click", setupOfflineAccess);
   unlockButton.addEventListener("click", unlockSession);
+  lockButton.addEventListener("click", lockSession);
   addButton.addEventListener("click", addNewItem);
   itemsTableBody.addEventListener("click", handleTableAction);
 }
