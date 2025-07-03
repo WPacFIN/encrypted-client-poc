@@ -4,7 +4,7 @@ stateDiagram-v2
 
     Unprovisioned: User not set up for offline access
 
-    Unprovisioned --> Provisioning : User logs in online\nand sets up PIN
+    Unprovisioned --> Provisioning : User logs in online and sets up PIN
 
     state Provisioning {
         [*] --> GenerateSalt
@@ -12,7 +12,7 @@ stateDiagram-v2
         RequestDEK --> ReceiveDEK : Server returns DEK & expiry
         ReceiveDEK --> DeriveMK : Derive MK from PIN + salt
         DeriveMK --> WrapDEK : Wrap DEK with MK
-        WrapDEK --> StoreSecrets : Store salt & expiry in IndexedDB\nStore wrappedDEK in HttpOnly cookie
+        WrapDEK --> StoreSecrets : Store salt & expiry in IndexedDB Store wrappedDEK in HttpOnly cookie
         StoreSecrets --> Provisioned
     }
 
@@ -29,7 +29,7 @@ stateDiagram-v2
         UnwrapDEK --> SessionActive : On success
     }
 
-    SessionActive: DEK in memory\nData accessible
+    SessionActive: DEK in memory Data accessible
 
     SessionActive --> DataOps : Read/write encrypted data
 
@@ -40,7 +40,7 @@ stateDiagram-v2
     ExpiryCheck --> SessionActive : Session valid
     ExpiryCheck --> Expired : Session expired
 
-    Expired: Session expired\nOffline access blocked
+    Expired: Session expired<br>Offline access blocked
 
     Expired --> RenewalOnline : User goes online
 
