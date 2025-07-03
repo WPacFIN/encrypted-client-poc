@@ -3,7 +3,7 @@
 /**
  * Retrieves the wrappedDEK from the HttpOnly cookie via the Service Worker.
  *
- *!!! --- CRITICAL DEMO-ONLY SIMPLIFICATION ---!!!
+ * !!! --- CRITICAL DEMO-ONLY SIMPLIFICATION ---!!!
  * In a real application, this function would use a service worker to read a
  * secure, HttpOnly cookie set by a real server. For this demo, to make it
  * runnable without a backend, we are directly reading from localStorage, which
