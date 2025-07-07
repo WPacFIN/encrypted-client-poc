@@ -1,11 +1,8 @@
-// public/service-worker-client.js (Updated)
+// public/service-worker-client.js
 const COOKIE_ENDPOINT = "/__read-cookie";
 
 /**
  * Retrieves the wrappedDEK from the HttpOnly cookie via the Service Worker.
- * This function initiates a fetch request to a special endpoint that the
- * service worker intercepts. The service worker reads the HttpOnly cookie
- * and sends its value back to the client via a message.
  * @returns {Promise<ArrayBuffer | null>} A promise that resolves with the ArrayBuffer of the wrapped DEK, or null if not found.
  */
 export function getWrappedDekFromCookie() {
@@ -17,10 +14,8 @@ export function getWrappedDekFromCookie() {
     }
 
     const messageListener = (event) => {
-      // Ensure the message is the one we're waiting for
       if (event.data && event.data.type === "COOKIE_VALUE") {
         navigator.serviceWorker.removeEventListener("message", messageListener);
-
         const base64Value = event.data.payload;
         if (base64Value) {
           try {
@@ -35,15 +30,13 @@ export function getWrappedDekFromCookie() {
             reject(new Error("Failed to decode wrapped DEK from cookie."));
           }
         } else {
-          resolve(null); // Cookie not found
+          resolve(null);
         }
       }
     };
 
     navigator.serviceWorker.addEventListener("message", messageListener);
 
-    // THE FIX: Add `credentials: 'include'` to ensure cookies are sent with the fetch request.
-    // This tells the browser to attach cookies (including HttpOnly ones) to this request.
     fetch(COOKIE_ENDPOINT, { credentials: "include" }).catch((err) => {
       navigator.serviceWorker.removeEventListener("message", messageListener);
       reject(err);

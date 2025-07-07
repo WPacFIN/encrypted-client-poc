@@ -1,4 +1,4 @@
-// public/session-manager.js (Updated with better logging)
+// public/session-manager.js
 import { cryptoService } from "./crypto-service.js";
 import { dbService } from "./db-service.js";
 import { getWrappedDekFromCookie } from "./service-worker-client.js";
@@ -17,13 +17,11 @@ class SessionManager {
   async unlockSession(pin) {
     try {
       const salt = await dbService.getMetadata("userSalt");
-      // New, more detailed logging
       if (!salt) {
         throw new Error("Device not provisioned: Salt not found in IndexedDB.");
       }
 
       const wrappedDekBuffer = await getWrappedDekFromCookie();
-      // New, more detailed logging
       if (!wrappedDekBuffer) {
         throw new Error(
           "Device not provisioned: Wrapped DEK not found in cookie. Please try setting the PIN again."
@@ -50,7 +48,6 @@ class SessionManager {
       console.log("Session unlocked successfully.");
       return true;
     } catch (error) {
-      // The error thrown above will now be more specific.
       console.error("Failed to unlock session:", error);
       this.lockSession();
       return false;

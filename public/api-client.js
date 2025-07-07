@@ -1,4 +1,4 @@
-// public/api-client.js (Updated)
+// public/api-client.js
 /**
  * Sends login credentials to the server.
  * @param {string} username
@@ -10,7 +10,7 @@ export async function loginUser(username, password) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
-    credentials: "include", // Ensures session cookie is sent on subsequent requests
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -32,7 +32,7 @@ export async function storeDekOnServer(base64WrappedDek) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ wrappedDek: base64WrappedDek }),
-    credentials: "include", // Ensures the session cookie is sent to authorize this request
+    credentials: "include",
   });
 
   if (!response.ok) {

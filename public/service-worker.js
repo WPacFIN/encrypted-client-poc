@@ -1,6 +1,5 @@
-// public/service-worker.js (Updated for Debugging)
-
-const CACHE_NAME = "offline-encryption-pwa-v7-debug"; // Incremented cache version
+// public/service-worker.js
+const CACHE_NAME = "offline-encryption-pwa-v7-debug";
 const COOKIE_ENDPOINT = "/__read-cookie";
 const WRAPPED_DEK_COOKIE_NAME = "wrapped-dek";
 
@@ -60,11 +59,9 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Check if it's the special cookie-reading endpoint
   if (url.pathname === COOKIE_ENDPOINT) {
     event.respondWith(
       (async () => {
-        // --- START NEW LOGGING ---
         console.log("[SW] Intercepted /__read-cookie request.");
         const headersObject = {};
         for (const [key, value] of event.request.headers.entries()) {
@@ -74,7 +71,6 @@ self.addEventListener("fetch", (event) => {
           "[SW] Request Headers Received:",
           JSON.stringify(headersObject, null, 2)
         );
-        // --- END NEW LOGGING ---
 
         const clientId = event.resultingClientId || event.clientId;
         if (!clientId) {
@@ -84,27 +80,22 @@ self.addEventListener("fetch", (event) => {
           );
         }
         const client = await self.clients.get(clientId);
-
         if (!client) {
           return new Response("Client not found.", { status: 404 });
         }
-
         const cookieHeader = event.request.headers.get("cookie") || "";
         const cookies = cookieHeader.split(";").map((c) => c.trim());
         const dekCookie = cookies.find((c) =>
           c.startsWith(`${WRAPPED_DEK_COOKIE_NAME}=`)
         );
         const wrappedDekValue = dekCookie ? dekCookie.split("=")[1] : null;
-
         client.postMessage({ type: "COOKIE_VALUE", payload: wrappedDekValue });
-
         return new Response(null, { status: 204 });
       })()
     );
     return;
   }
 
-  // For other GET requests, use the cache-first strategy.
   if (event.request.method === "GET") {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
