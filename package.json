@@ -1,0 +1,26 @@
+{
+  "name": "pwa-encryption-demo-server",
+  "version": "1.0.0",
+  "description": "Server for PWA offline encryption demo with auth and HttpOnly cookies",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WPacFIN/encrypted-client-poc.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/WPacFIN/encrypted-client-poc/issues"
+  },
+  "homepage": "https://github.com/WPacFIN/encrypted-client-poc#readme"
+}
