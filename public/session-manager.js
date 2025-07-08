@@ -1,7 +1,6 @@
 // public/session-manager.js
 import { cryptoService } from "./crypto-service.js";
 import { dbService } from "./db-service.js";
-import { getWrappedDekFromCookie } from "./service-worker-client.js";
 
 class SessionManager {
   #dek = null;
@@ -14,38 +13,28 @@ class SessionManager {
     this.#dek = null;
   }
 
-  async unlockSession(pin) {
+  async unlockSession(pin, username) {
     try {
-      const salt = await dbService.getMetadata("userSalt");
-      if (!salt) {
-        throw new Error("Device not provisioned: Salt not found in IndexedDB.");
+      if (!username) {
+        throw new Error("Username is required to unlock a session.");
       }
-
-      const wrappedDekBuffer = await getWrappedDekFromCookie();
-      if (!wrappedDekBuffer) {
+      const user = await dbService.getProvisionedUser(username);
+      if (!user) {
         throw new Error(
-          "Device not provisioned: Wrapped DEK not found in cookie. Please try setting the PIN again."
+          `No provisioning information found for user: ${username}`
         );
       }
 
-      const masterKey = await cryptoService.deriveMasterKey(pin, salt);
-      const extractableDek = await cryptoService.unwrapDek(
-        masterKey,
-        wrappedDekBuffer
-      );
-      const rawDekBuffer = await window.crypto.subtle.exportKey(
-        "raw",
-        extractableDek
-      );
-      this.#dek = await window.crypto.subtle.importKey(
-        "raw",
-        rawDekBuffer,
-        { name: "AES-GCM" },
-        false,
-        ["encrypt", "decrypt"]
-      );
+      const { salt, wrappedDek } = user;
 
-      console.log("Session unlocked successfully.");
+      if (!salt || !wrappedDek) {
+        throw new Error(`Incomplete provisioning data for user: ${username}`);
+      }
+
+      const masterKey = await cryptoService.deriveMasterKey(pin, salt);
+      this.#dek = await cryptoService.unwrapDek(masterKey, wrappedDek);
+
+      console.log(`Session unlocked successfully for ${username}.`);
       return true;
     } catch (error) {
       console.error("Failed to unlock session:", error);

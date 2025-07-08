@@ -32,11 +32,11 @@ export const cryptoService = {
   },
   async wrapDek(masterKey, dek) {
     const iv = window.crypto.getRandomValues(new Uint8Array(IV_LENGTH_BYTES));
-    const wrappedDek = await window.crypto.subtle.wrapKey(
-      "raw",
-      dek,
+    const rawDek = await window.crypto.subtle.exportKey("raw", dek);
+    const wrappedDek = await window.crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: iv },
       masterKey,
-      { name: "AES-GCM", iv: iv }
+      rawDek
     );
     const ivAndWrappedDek = new Uint8Array(iv.length + wrappedDek.byteLength);
     ivAndWrappedDek.set(iv);
@@ -47,13 +47,16 @@ export const cryptoService = {
     const buffer = new Uint8Array(ivAndWrappedDek);
     const iv = buffer.slice(0, IV_LENGTH_BYTES);
     const wrappedDek = buffer.slice(IV_LENGTH_BYTES);
-    return window.crypto.subtle.unwrapKey(
-      "raw",
-      wrappedDek,
-      masterKey,
+    const rawDek = await window.crypto.subtle.decrypt(
       { name: "AES-GCM", iv: iv },
-      { name: "AES-GCM", length: 256 },
-      true,
+      masterKey,
+      wrappedDek
+    );
+    return window.crypto.subtle.importKey(
+      "raw",
+      rawDek,
+      { name: "AES-GCM" },
+      false,
       ["encrypt", "decrypt"]
     );
   },

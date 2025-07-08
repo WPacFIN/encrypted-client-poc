@@ -33,7 +33,8 @@
         margin-top: 15px;
       }
       input[type="text"],
-      input[type="password"] {
+      input[type="password"],
+      select {
         width: 220px;
         padding: 10px;
         margin-right: 10px;
@@ -128,8 +129,8 @@
     <div class="container">
       <h2>Offline Encryption PWA Demo</h2>
 
-      <div id="loginSection" class="section">
-        <h3>1. Login</h3>
+      <div id="loginSection" class="section hidden">
+        <h3>1. Login (Online)</h3>
         <p>Please log in to continue.</p>
         <input
           type="text"
@@ -146,6 +147,13 @@
         <button id="loginButton">Login</button>
       </div>
 
+      <div id="userSelectionSection" class="section hidden">
+        <h3>1. Select User (Offline)</h3>
+        <p>Select your profile to unlock your data.</p>
+        <select id="userSelect"></select>
+        <button id="selectUserButton">Select User</button>
+      </div>
+
       <div id="provisioningSection" class="section hidden">
         <h3>2. Provisioning (First Time Setup)</h3>
         <p>Enter a PIN to set up this device for secure offline access.</p>
@@ -158,7 +166,7 @@
       </div>
 
       <div id="sessionSection" class="section hidden">
-        <h3>3. Unlock Session</h3>
+        <h3 id="unlockHeader">3. Unlock Session</h3>
         <p>Enter your PIN to unlock the local database.</p>
         <input type="password" id="unlockPin" placeholder="Enter your PIN" />
         <button id="unlockButton">Unlock Session</button>
