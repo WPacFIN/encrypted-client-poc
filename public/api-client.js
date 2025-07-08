@@ -1,4 +1,3 @@
-// public/api-client.js
 /**
  * Sends login credentials to the server.
  * @param {string} username

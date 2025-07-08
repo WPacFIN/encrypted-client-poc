@@ -1,22 +1,20 @@
-// public/db-service.js
 import { openDB } from "idb";
 
 const DB_NAME = "secure-offline-pwa-db";
-const DB_VERSION = 2; // Incremented DB version for schema change
+const DB_VERSION = 1;
 const USERS_STORE = "users";
 const DATA_STORE = "app-data";
 
 const dbPromise = openDB(DB_NAME, DB_VERSION, {
   upgrade(db, oldVersion, newVersion, transaction) {
     if (oldVersion < 2) {
-      // Create new stores if they don't exist
       if (!db.objectStoreNames.contains(USERS_STORE)) {
         db.createObjectStore(USERS_STORE, { keyPath: "username" });
       }
       if (!db.objectStoreNames.contains(DATA_STORE)) {
-        db.createObjectStore(DATA_STORE, { keyPath: "id" });
+        const dataStore = db.createObjectStore(DATA_STORE, { keyPath: "id" });
+        dataStore.createIndex("by_owner", "owner", { unique: false });
       }
-      // Clean up old metadata store if it exists from previous versions
       if (db.objectStoreNames.contains("metadata")) {
         db.deleteObjectStore("metadata");
       }
@@ -39,6 +37,13 @@ export const dbService = {
   },
   async getEncryptedData(id) {
     return (await dbPromise).get(DATA_STORE, id);
+  },
+  // Get all data for a specific user
+  async getAllDataForUser(username) {
+    const db = await dbPromise;
+    const tx = db.transaction(DATA_STORE, "readonly");
+    const index = tx.store.index("by_owner");
+    return index.getAll(username);
   },
   async saveEncryptedData(data) {
     return (await dbPromise).put(DATA_STORE, data);

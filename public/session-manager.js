@@ -1,4 +1,3 @@
-// public/session-manager.js
 import { cryptoService } from "./crypto-service.js";
 import { dbService } from "./db-service.js";
 
@@ -58,7 +57,11 @@ class SessionManager {
     if (this.isLocked()) throw new Error("Session is locked.");
     const plaintext = JSON.stringify(item);
     const encryptedData = await cryptoService.encryptData(this.#dek, plaintext);
-    await dbService.saveEncryptedData({ id: item.id, data: encryptedData });
+    await dbService.saveEncryptedData({
+      id: item.id,
+      data: encryptedData,
+      owner: item.owner,
+    });
   }
 }
 

@@ -1,4 +1,3 @@
-// public/service-worker-client.js
 const COOKIE_ENDPOINT = "/__read-cookie";
 
 /**

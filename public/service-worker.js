@@ -1,4 +1,3 @@
-// public/service-worker.js
 const CACHE_NAME = "offline-encryption-pwa-v10-split-token";
 
 const URLS_TO_CACHE = [

@@ -1,4 +1,3 @@
-// public/client.js
 import { cryptoService } from "./crypto-service.js";
 import { dbService } from "./db-service.js";
 import { sessionManager } from "./session-manager.js";
@@ -74,7 +73,12 @@ async function handleLogin() {
     }
     log(`Attempting to log in as ${username}...`);
     const loginResult = await loginUser(username, password);
+
     currentOnlineUser = loginResult.username;
+    if (!currentOnlineUser) {
+      throw new Error("Server did not return a username on login.");
+    }
+
     log(`✅ Login successful for ${currentOnlineUser}!`);
     await checkProvisioningState();
   } catch (error) {
@@ -86,6 +90,11 @@ async function handleLogin() {
 }
 
 async function checkProvisioningState() {
+  if (!currentOnlineUser) {
+    log("Cannot check provisioning state without a logged-in user.");
+    showSection(loginSection);
+    return;
+  }
   const user = await dbService.getProvisionedUser(currentOnlineUser);
   if (user) {
     log(
@@ -126,9 +135,9 @@ function handleUserSelection() {
 async function renderItemsTable() {
   log("Refreshing items table...");
   itemsTableBody.innerHTML = "";
-  const allItems = await dbService.getAllData();
-  if (allItems.length === 0) {
-    log("No items found in the database.");
+  const allItems = await dbService.getAllDataForUser(selectedOfflineUser);
+  if (!allItems || allItems.length === 0) {
+    log("No items found in the database for this user.");
     return;
   }
   allItems.forEach((item) => {
@@ -145,11 +154,75 @@ async function renderItemsTable() {
 }
 
 async function handleTableAction(event) {
-  // ... (This function remains the same as before)
+  const target = event.target;
+  if (!target.matches("button")) return;
+  if (sessionManager.isLocked()) {
+    log("❌ Action failed: Session is locked.");
+    return;
+  }
+  const row = target.closest("tr");
+  const id = row.dataset.id;
+  const contentCell = row.querySelector(".content-cell");
+  const actionCell = row.querySelector(".action-cell");
+  disableAllButtons(true);
+  try {
+    if (target.classList.contains("unlock-btn")) {
+      log(`Unlocking item ${id}...`);
+      const decryptedItem = await sessionManager.getDecryptedItem(id);
+      contentCell.innerHTML = `<input type="text" value="${decryptedItem.content}">`;
+      actionCell.innerHTML = `<button class="update-btn">Update</button><button class="lock-btn">Lock</button>`;
+      log(`Item ${id} unlocked.`);
+    } else if (target.classList.contains("update-btn")) {
+      log(`Updating item ${id}...`);
+      const newContent = contentCell.querySelector("input").value;
+      await sessionManager.saveItem({
+        id,
+        content: newContent,
+        owner: selectedOfflineUser,
+      });
+      contentCell.innerHTML = `<span>[Encrypted]</span>`;
+      actionCell.innerHTML = `<button class="unlock-btn">Unlock</button>`;
+      log(`Item ${id} updated and locked.`);
+    } else if (target.classList.contains("lock-btn")) {
+      log(`Locking item ${id}...`);
+      contentCell.innerHTML = `<span>[Encrypted]</span>`;
+      actionCell.innerHTML = `<button class="unlock-btn">Unlock</button>`;
+      log(`Item ${id} locked.`);
+    }
+  } catch (error) {
+    log(`❌ Action failed for item ${id}: ${error.message}`);
+  } finally {
+    disableAllButtons(false);
+  }
 }
 
 async function addNewItem() {
-  // ... (This function remains the same as before)
+  if (sessionManager.isLocked()) {
+    log("❌ Action failed: Session is locked.");
+    return;
+  }
+  disableAllButtons(true);
+  try {
+    const content = newItemContentInput.value;
+    if (!content) {
+      log("ERROR: Please provide content for the new item.");
+      return;
+    }
+    const newItem = {
+      id: crypto.randomUUID(),
+      content: content,
+      owner: selectedOfflineUser,
+    };
+    log(`Adding new item with ID: ${newItem.id}...`);
+    await sessionManager.saveItem(newItem);
+    log(`✅ Successfully saved new item.`);
+    newItemContentInput.value = "";
+    await renderItemsTable();
+  } catch (error) {
+    log(`❌ Failed to save new item: ${error.message}`);
+  } finally {
+    disableAllButtons(false);
+  }
 }
 
 async function setupOfflineAccess() {
@@ -221,9 +294,9 @@ function lockSession() {
   log("Locking session...");
   sessionManager.lockSession();
   unlockPinInput.value = "";
-  unlockHeader.textContent = `3. Unlock Session for ${selectedOfflineUser}`;
-  showSection(sessionSection);
-  log("Session is now locked. Please enter PIN to unlock.");
+
+  // Re-initialize the app to show the correct starting screen (online vs offline)
+  initialize();
 }
 
 async function initialize() {
@@ -252,14 +325,13 @@ async function initialize() {
       log(
         "No users provisioned for offline use. Please connect to the internet to log in and set up a user."
       );
-      showSection(loginSection); // Show login but it will fail, which is expected.
+      showSection(loginSection);
       loginButton.disabled = true;
       usernameInput.disabled = true;
       passwordInput.disabled = true;
     }
   }
 
-  // Add event listeners
   loginButton.addEventListener("click", handleLogin);
   selectUserButton.addEventListener("click", handleUserSelection);
   setupButton.addEventListener("click", setupOfflineAccess);

@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import session from "express-session";
 import path from "path";
@@ -44,7 +43,9 @@ app.post("/api/login", async (req, res) => {
   const user = users.find((u) => u.username === username);
   if (user && user.password === password) {
     req.session.userId = user.username;
-    res.status(200).json({ message: "Login successful." });
+    res
+      .status(200)
+      .json({ message: "Login successful.", username: user.username });
   } else {
     res.status(401).json({ error: "Invalid credentials." });
   }
