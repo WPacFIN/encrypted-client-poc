@@ -1,13 +1,24 @@
+/**
+ * @file client.js
+ * @description This file is the main entry point for the client-side application logic.
+ * It acts as the "controller" that manages the UI, handles user interactions, and
+ * orchestrates calls to the various service modules (crypto, database, session, api).
+ * It is responsible for the entire user workflow, from online login and offline
+ * provisioning to the secure lock/unlock cycle for accessing encrypted data.
+ */
+
 import { cryptoService } from "./crypto-service.js";
 import { dbService } from "./db-service.js";
 import { sessionManager } from "./session-manager.js";
 import { loginUser } from "./api-client.js";
 
-// --- State ---
-let currentOnlineUser = null;
-let selectedOfflineUser = null;
+// --- Global State ---
+// These variables hold the application's current state.
+let currentOnlineUser = null; // Stores the username of the user authenticated via online login.
+let selectedOfflineUser = null; // Stores the username selected for an offline unlock operation.
 
-// --- DOM Elements ---
+// --- DOM Element References ---
+// Caching references to all interactive DOM elements for performance and convenience.
 const loginSection = document.getElementById("loginSection");
 const userSelectionSection = document.getElementById("userSelectionSection");
 const provisioningSection = document.getElementById("provisioningSection");
@@ -33,18 +44,32 @@ const itemsTableBody = document.querySelector("#itemsTable tbody");
 const logs = document.getElementById("logs");
 
 // --- Utility Functions ---
+
+/**
+ * Logs a message to both the browser's developer console and the on-screen log element.
+ * @param {string} message The message to log.
+ */
 function log(message) {
   console.log(message);
   logs.innerHTML =
     `${new Date().toLocaleTimeString()}: ${message}\n` + logs.innerHTML;
 }
 
+/**
+ * Disables or enables all buttons on the page to prevent concurrent operations.
+ * @param {boolean} disabled - True to disable all buttons, false to enable them.
+ */
 function disableAllButtons(disabled) {
   document
     .querySelectorAll("button")
     .forEach((button) => (button.disabled = disabled));
 }
 
+/**
+ * Manages UI visibility by showing only the specified section and hiding all others.
+ * This function acts as a simple view router for the single-page application.
+ * @param {HTMLElement} sectionToShow - The section element to make visible.
+ */
 function showSection(sectionToShow) {
   [
     loginSection,
@@ -62,6 +87,10 @@ function showSection(sectionToShow) {
 
 // --- Main Application Logic ---
 
+/**
+ * Handles the online login process. It calls the API client to authenticate
+ * with the server and then transitions the UI to the next appropriate state.
+ */
 async function handleLogin() {
   disableAllButtons(true);
   try {
@@ -89,6 +118,11 @@ async function handleLogin() {
   }
 }
 
+/**
+ * After a successful online login, this function checks if the user has already
+ * set up a PIN on this device. It directs them to either the PIN unlock screen
+ * or the one-time PIN setup screen.
+ */
 async function checkProvisioningState() {
   if (!currentOnlineUser) {
     log("Cannot check provisioning state without a logged-in user.");
@@ -111,6 +145,11 @@ async function checkProvisioningState() {
   }
 }
 
+/**
+ * Populates the user selection dropdown with usernames of all users who have
+ * provisioned this device for offline use.
+ * @param {Array<Object>} users - An array of user objects from the database.
+ */
 function populateUserSelection(users) {
   userSelect.innerHTML = "";
   users.forEach((user) => {
@@ -121,6 +160,10 @@ function populateUserSelection(users) {
   });
 }
 
+/**
+ * Handles the selection of a user from the dropdown in offline mode,
+ * then transitions to the PIN entry screen for that user.
+ */
 function handleUserSelection() {
   selectedOfflineUser = userSelect.value;
   if (!selectedOfflineUser) {
@@ -132,6 +175,10 @@ function handleUserSelection() {
   showSection(sessionSection);
 }
 
+/**
+ * Fetches and renders the encrypted data items for the currently unlocked user.
+ * It queries the database for items owned by the `selectedOfflineUser`.
+ */
 async function renderItemsTable() {
   log("Refreshing items table...");
   itemsTableBody.innerHTML = "";
@@ -153,6 +200,11 @@ async function renderItemsTable() {
   log(`Rendered ${allItems.length} items.`);
 }
 
+/**
+ * Handles clicks on buttons within the data table (Unlock, Update, Lock).
+ * This function acts as a delegate for all table actions.
+ * @param {Event} event - The click event from the table.
+ */
 async function handleTableAction(event) {
   const target = event.target;
   if (!target.matches("button")) return;
@@ -196,6 +248,10 @@ async function handleTableAction(event) {
   }
 }
 
+/**
+ * Handles the "Add Item" button click. It creates a new item object,
+ * associates it with the current user, and saves it via the session manager.
+ */
 async function addNewItem() {
   if (sessionManager.isLocked()) {
     log("❌ Action failed: Session is locked.");
@@ -225,6 +281,10 @@ async function addNewItem() {
   }
 }
 
+/**
+ * Handles the one-time PIN setup process for a user on a new device.
+ * This is the core provisioning flow.
+ */
 async function setupOfflineAccess() {
   disableAllButtons(true);
   try {
@@ -263,6 +323,9 @@ async function setupOfflineAccess() {
   }
 }
 
+/**
+ * Handles the PIN entry to unlock an existing offline session.
+ */
 async function unlockSession() {
   disableAllButtons(true);
   try {
@@ -291,6 +354,9 @@ async function unlockSession() {
   }
 }
 
+/**
+ * Locks the current session by clearing the in-memory key and resetting the UI.
+ */
 function lockSession() {
   log("Locking session...");
   sessionManager.lockSession();
@@ -301,6 +367,11 @@ function lockSession() {
   initialize();
 }
 
+/**
+ * The main entry point for the application. This function determines the
+ * initial state of the application (online, offline, provisioned, etc.)
+ * and sets up all the necessary event listeners.
+ */
 async function initialize() {
   log("Client initialized.");
   if ("serviceWorker" in navigator) {
@@ -356,4 +427,5 @@ async function initialize() {
   itemsTableBody.addEventListener("click", handleTableAction);
 }
 
+// Start the application.
 initialize();

@@ -71,10 +71,11 @@ export const cryptoService = {
    */
   async wrapDek(masterKey, dek) {
     const iv = window.crypto.getRandomValues(new Uint8Array(IV_LENGTH_BYTES));
+    // Use `wrapKey` as it's semantically correct for wrapping a CryptoKey.
     const wrappedDek = await window.crypto.subtle.wrapKey(
       "raw", // The format of the key being wrapped
       dek, // The CryptoKey to wrap
-      masterKey,
+      masterKey, // The wrapping key (which has 'wrapKey' usage)
       { name: "AES-GCM", iv: iv }
     );
     // The IV must be stored alongside the ciphertext to be used for decryption.
