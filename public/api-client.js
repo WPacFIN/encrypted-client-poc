@@ -1,4 +1,11 @@
 /**
+ * @file api-client.js
+ * @description This file handles all communication with the backend server.
+ * For this demo, it only contains a login function. In a real application,
+ * it would handle all API requests.
+ */
+
+/**
  * Sends login credentials to the server.
  * @param {string} username
  * @param {string} password

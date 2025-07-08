@@ -1,4 +1,12 @@
-const CACHE_NAME = "offline-encryption-pwa-v10-split-token";
+/**
+ * @file service-worker.js
+ * @description This service worker is responsible for making the application work offline.
+ * It uses a "cache-first" strategy. On install, it caches all the essential
+ * application files. On fetch, it tries to serve requests from the cache first.
+ * If a resource isn't in the cache, it falls back to the network.
+ */
+
+const CACHE_NAME = "offline-encryption-pwa-v12-multi-user";
 
 const URLS_TO_CACHE = [
   "/",
@@ -43,12 +51,16 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  // We only cache GET requests. Other requests (like POST) should go to the network.
   if (event.request.method === "GET") {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
+        // If we have a cached response, return it.
         if (cachedResponse) {
           return cachedResponse;
         }
+        // If not in cache, try to fetch from the network.
+        // This will fail when the app is offline.
         return fetch(event.request);
       })
     );

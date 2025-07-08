@@ -1,4 +1,3 @@
-// public/client.js (Updated)
 import { cryptoService } from "./crypto-service.js";
 import { dbService } from "./db-service.js";
 import { sessionManager } from "./session-manager.js";
@@ -298,7 +297,7 @@ function lockSession() {
   sessionStorage.removeItem("lastUser"); // Forget the user on explicit lock
   unlockPinInput.value = "";
 
-  // Go back to the user selection screen
+  // Re-initialize the app to show the correct starting screen (online vs offline)
   initialize();
 }
 
@@ -314,35 +313,40 @@ async function initialize() {
     }
   }
 
-  // This block determines the initial UI state
-  const lastUser = sessionStorage.getItem("lastUser");
-  if (lastUser) {
-    log(`Found last active user: ${lastUser}. Going to PIN unlock.`);
-    selectedOfflineUser = lastUser;
-    unlockHeader.textContent = `3. Unlock Session for ${selectedOfflineUser}`;
-    showSection(sessionSection);
-  } else {
-    const users = await dbService.getAllProvisionedUsers();
-    if (users && users.length > 0) {
-      log(`Found ${users.length} provisioned users. Showing user selection.`);
-      populateUserSelection(users);
-      showSection(userSelectionSection);
+  try {
+    const lastUser = sessionStorage.getItem("lastUser");
+    if (lastUser) {
+      log(`Found last active user: ${lastUser}. Going to PIN unlock.`);
+      selectedOfflineUser = lastUser;
+      unlockHeader.textContent = `3. Unlock Session for ${selectedOfflineUser}`;
+      showSection(sessionSection);
     } else {
-      log("Device is not provisioned for any user.");
-      if (navigator.onLine) {
-        log("App is online. Showing login screen for first-time setup.");
-        showSection(loginSection);
+      const users = await dbService.getAllProvisionedUsers();
+      if (users && users.length > 0) {
+        log(`Found ${users.length} provisioned users. Showing user selection.`);
+        populateUserSelection(users);
+        showSection(userSelectionSection);
       } else {
-        log("App is offline and no users are set up. Login is disabled.");
-        showSection(loginSection);
-        loginButton.disabled = true;
-        usernameInput.disabled = true;
-        passwordInput.disabled = true;
+        log("Device is not provisioned for any user.");
+        if (navigator.onLine) {
+          log("App is online. Showing login screen for first-time setup.");
+          showSection(loginSection);
+        } else {
+          log("App is offline and no users are set up. Login is disabled.");
+          showSection(loginSection);
+          loginButton.disabled = true;
+          usernameInput.disabled = true;
+          passwordInput.disabled = true;
+        }
       }
     }
+  } catch (error) {
+    log(`❌ Initialization failed: ${error.message}`);
+    log(
+      "This can happen if the database connection fails. Please check your network or try refreshing."
+    );
   }
 
-  // This block attaches all event listeners, regardless of the initial UI state
   loginButton.addEventListener("click", handleLogin);
   selectUserButton.addEventListener("click", handleUserSelection);
   setupButton.addEventListener("click", setupOfflineAccess);
